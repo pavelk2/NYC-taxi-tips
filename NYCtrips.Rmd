@@ -1,0 +1,209 @@
+---
+title: "NYC Trips"
+author: Pavel Kucherbaev
+date: August 18, 2016
+output:
+  md_document:
+    variant: markdown_github
+---
+
+
+```{r}
+source("data_preparation.r")
+```
+
+## 1. Download dataset
+The dataset (csv) can be downloaded from [BigQuery](https://bigquery.cloud.google.com/table/nyc-tlc:yellow.trips_2015_07). You first need to export it to your Google Storage bucket (several CSV files are generated of 255MB), from where the files can be downloaded on a local machine. For the simplicity of obtaining the table we analyse the data for July, 2015 (not June as mentioned in the initial task).
+
+```{r}
+trips = read.csv("yellow2015_07000000000000.csv")
+str(trips)
+```
+
+A description of what each column means is given here: [Data dictionary](http://www.nyc.gov/html/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf)
+
+## 2. Format columns
+Now we want to make sure that columns in our dataset are of appropriate types:
+
+```{r}
+trips_prepared <- prepare_data(trips)
+```
+
+
+## 3. Remove inconsistent records
+Now we want to make sure we do not have records with broken data
+
+```{r}
+trips_cleaned <- clean_data(trips_prepared)
+```
+
+## 4. Sampling data
+It is hard to work with millions of records on a laptop, so we randomly select 250 000 trip records to work with (we believe it does not affect representability):
+
+```{r}
+trips_short <- trips_cleaned[sample(nrow(trips_cleaned), 250000),]
+str(trips_short)
+```
+
+## 5. Explore data
+Let's see how our trips are spread geographically:
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+ManhattanMap <- qmap("Manhattan New York", zoom = 11, color = "bw")+ theme(legend.position="bottom")
+ManhattanMap + geom_point(aes(x = pickup_longitude, y = pickup_latitude), color="darkblue", size =0.5,alpha = 1/2, data = trips_short)
+```
+
+Let's see how tip percentages look like:
+
+```{r, echo = FALSE}
+summary(trips_short$tip_percentage)
+```
+
+The maximum value seems to be extreme. 
+Let's see how extreme are the top percentiles:
+
+```{r}
+quantile(trips_short$tip_percentage,c(0.95,0.99,0.999))
+```
+
+To make our data more consistent we remove all records with tips greater than 100%:
+```{r}
+trips_short <- trips_short[trips_short$tip_percentage<=100,]
+```
+
+```{r, fig.width=8, fig.height=2.5}
+ggplot(data = trips_short, aes(x = tip_percentage))+xlab("Tips, %") + geom_histogram(binwidth = 1) + geom_vline(xintercept = c(20,25,30), col = "red",linetype = "longdash") + geom_vline(xintercept = c(13), col = "blue",linetype = "longdash")
+```
+
+We see 3 clear spikes: 20%, 25%, 30%, which refer to suggested tips on payment machine screen. If we remove the records causing these spikes, the distribution will be normal with the mean around 13%.
+
+Let's see if time of the day affects tips people pay:
+
+```{r, fig.width=8, fig.height=4}
+plot(as.factor(trips_short$pickup_datetime$hour), trips_short$tip_percentage, xlab = "hour", ylab="Tips, %")
+```
+
+It seems that during lunch time the InterQuartile range is smaller, making people more consistent in the amount of tips they leave.
+
+Now let's see if there are any variables affecting the tip_percentage people pay (assuming the dependency is linear):
+
+```{r, echo = FALSE}
+fit <- lm(tip_percentage ~ trip_distance + pickup_datetime$hour + pickup_datetime$yday + pickup_longitude + pickup_latitude + trip_distance+passenger_count, data=trips_short)
+summary(fit)
+```
+
+Because we use sampled data every time we have different variables which are statistically significant, such as *distance (in miles)*, *pickup longitude*, *latitude* and the *number of passengers*. They affect the percentage of tips people leave and the slope shows how much does an extra mile (for distance) or an extra passenger (for number of passengers) affect tip percentage. We are primarily interested in how geographical location affect tip percentage, therefore further we split NYC into zones.
+
+## 6. Group trips into NYC zones (ZIP codes)
+There are different ways we could group pickup coordinates to analyze aggregated data. We decide to map the coordinates to the nearest ZIP codes. For that we 
+use the R package *Zipcodes*, and implement a function *getZipCode()* to augment every record with ZIP code information.
+
+```{r}
+trips_short_zip <- augment_data(trips_short)
+```
+
+We aggregate our records by zipcode (zone)
+
+```{r}
+zones <- group_data(trips_short_zip)
+str(zones)
+```
+
+The lower the *amount* of records for a given zone we have the more extreme the aggregated values are in comparison to zones with more records. Because of that in our analysis we consider only zones with more than 500 records (500 is taken arbitrary as a big enough number of records).
+
+```{r}
+zones <- zones[zones$amount >500,]
+```
+
+#### Median tips in $
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+ManhattanMap + geom_point(aes(x = lon, y = lat, colour = tip_amount.median_round), size =8,alpha = 1/2, data = zones)
+#+geom_text(aes(x = lon, y = lat, label = zipcode), fontface = 14, size = 3, color = "black",alpha = 0.9, data = zones)  
+```
+
+#### Mean tips in $
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+ManhattanMap + geom_point(aes(x = lon, y = lat, colour = tip_amount.mean_round), size =8,alpha = 1/2, data = zones)
+#+geom_text(aes(x = lon, y = lat, label = zipcode), fontface = 14, size = 3, color = "black",alpha = 0.9, data = zones)  
+```
+
+#### Median tip percentages
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+ManhattanMap + geom_point(aes(x = lon, y = lat, colour = tip_percentage.median_round), size =8,alpha = 1/2, data = zones)
+#+geom_text(aes(x = lon, y = lat, label = zipcode), fontface = 14, size = 3, color = "black",alpha = 0.9, data = zones)  
+```
+
+#### Mean tip percentages
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+ManhattanMap + geom_point(aes(x = lon, y = lat, colour = tip_percentage.mean_round), size =8,alpha = 1/2, data = zones)+geom_text(aes(x = lon, y = lat, label = zipcode), fontface = 14, size = 2, color = "black", data = zones)  
+```
+
+#### Zoomed Manhattan Area
+
+```{r, echo = FALSE, fig.width=8, fig.height=8}
+qmap("Manhattan New York", zoom = 12, color = "bw")+ theme(legend.position="bottom")+geom_point(aes(x = lon, y = lat, colour = tip_percentage.mean_round), size=10,alpha = 1/2, data = zones)+geom_text(aes(x = lon, y = lat, label = zipcode),  size = 2, color = "black", data = zones)
+```
+
+We see that from WorldTradeCenter [10250](https://www.google.it/maps/place/40??42'36.0%22N+74??00'57.5%22W/@40.710004,-74.0181687,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d40.71!4d-74.01598?hl=en) people tend to pay in average **18% tip**.
+From JFK Airport [10024](https://www.google.it/maps/place/New+York,+NY+10024,+USA/@40.7858182,-73.996241,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25862915fae1d:0x82d8ab21c229bfe!8m2!3d40.7859464!4d-73.9741874?hl=en) people pay **19% tip**.
+
+From La Guardia Airport [11371](https://www.google.it/maps/place/New+York,+NY+11371,+USA/@40.7809106,-73.8885426,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25f8eb3819a01:0x9c55729e06838673!8m2!3d40.7766392!4d-73.87425?hl=en) and Times Square [10036](https://www.google.it/maps/place/New+York,+NY+10036,+USA/@40.7611254,-74.0001543,15z/data=!3m1!4b1!4m5!3m4!1s0x89c2585393f82307:0xf7d56896de1566ed!8m2!3d40.7602619!4d-73.9932872?hl=en) people tend to pay **20% tip**.
+
+## 7. Evaluation
+Let's check how consistent these observations are.
+
+```{r}
+WorldTradeCenter_10250 <- trips_short_zip[trips_short_zip$zipcode == "10250",]  
+LaGuardia_11371 <- trips_short_zip[trips_short_zip$zipcode == "11371",]
+TimesSquare_10036 <- trips_short_zip[trips_short_zip$zipcode == "10036",]
+JFK_11430 <- trips_short_zip[trips_short_zip$zipcode == "11430",]
+```
+
+```{r}
+welch_test <- t.test(TimesSquare_10036$tip_percentage,WorldTradeCenter_10250$tip_percentage,alternative = "greater")
+welch_test$p.value
+```
+
+The Welch test shows that people starting from Times Square really tend to pay more tips (p-value=`r round(welch_test$p.value,3)`).
+Let's check how much more they tend to pay:
+
+```{r}
+cohen_distance <- cohen.d(TimesSquare_10036$tip_percentage,WorldTradeCenter_10250$tip_percentage)
+cohen_distance$estimate
+```
+
+It seems they tend to pay `r round(cohen_distance$estimate,2)`% more. While the difference exists and statistically significant the percentage difference is small.
+
+Let's compare two airports (JFK and LaGuardia):
+
+```{r}
+welch_test <- t.test(LaGuardia_11371$tip_percentage,JFK_11430$tip_percentage,alternative = "greater")
+welch_test$p.value
+```
+
+People taking taxis from LaGuardia airport seem to pay more than people from JFK (p.value < 0.05).
+
+```{r}
+cohen_distance <- cohen.d(LaGuardia_11371$tip_percentage,JFK_11430$tip_percentage)
+cohen_distance$estimate
+```
+
+Still they pay only `r round(cohen_distance$estimate,2)`% more.
+
+## 8. Conclusion
+From the data we did not find zones in NYC traveling from which people would pay substantially different tips (in percentages). Without focusing on tiny details we can say that primarily people pay 20% tip (the most popular option on the payment device screen), which is the median value in all zones.  
+
+In some regions, such as Times Square and LaGuardia Airport we observe more outliers, paying a lot, affecting the mean value.
+
+People do pay more in absolute values, traveling from airports (JFK and LaGuardia), but primarily because the taxi fare is higher.
+
+People traveling from LaGuardia and TimesSquare tend to pay around 20% tips, while people traveling from Carnegie Hill tend to pay around 18%. 
+
+## 9. Limitations
+We conducted the analysis only on a sample of reconds (250 000). We did not use the data about zones with less than 500 records. While we used ZIP codes for aggregating geographical data, potentially using another entity aggregation (e.g. small: blocks or large: heighborhoods) could lead to different results.
+
+These and several other reasons create a bias in our conclusions.
