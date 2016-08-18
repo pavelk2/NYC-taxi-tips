@@ -1,3 +1,9 @@
+NYC TAXI TRIPS
+==============
+
+Are there some areas in NYC, traveling from which people pay more tips?
+=======================================================================
+
 ``` r
 source("data_preparation.r")
 ```
@@ -204,21 +210,29 @@ The lower the *amount* of records for a given zone we have the more extreme the 
 zones <- zones[zones$amount >500,]
 ```
 
-#### Median tips in $
+#### Median tips (in $) people pay traveling from certain NYC zones
 
 ![](NYCtrips_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-#### Mean tips in $
+From the picture it is clear people pay more tips traveling from airports (LaGuardia and JFK) and the south of Manhattan (simply because taxi fare is more expensive).
+
+#### Mean tips (in $) people pay traveling from certain NYC zones
 
 ![](NYCtrips_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
-#### Median tip percentages
+Here we clearly see some regions, such as Times Square, Financial district (south of Manhattan), the rest of Manhattan and 2 airports. Still we are less interested in absolute values of tips but more in percentage values.
+
+#### Median tip percentages people pay traveling from certain NYC zones
 
 ![](NYCtrips_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
-#### Mean tip percentages
+It is very interesting that the big majority of travellers pay 20% tip, which is median in all NYC zones.
+
+#### Mean tip percentages people pay traveling from certain NYC zones
 
 ![](NYCtrips_files/figure-markdown_github/unnamed-chunk-19-1.png)
+
+This is exactly what we were looking for. It seems that there are really some areas (Times Square and LaGuardia), traveling from which people tend to pay more tips. The Manhattan area has many overlaps, let's zoom in.
 
 #### Zoomed Manhattan Area
 
@@ -231,9 +245,11 @@ zones <- zones[zones$amount >500,]
 
 ![](NYCtrips_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
-We see that from WorldTradeCenter [10250](https://www.google.it/maps/place/40??42'36.0%22N+74??00'57.5%22W/@40.710004,-74.0181687,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d40.71!4d-74.01598?hl=en) people tend to pay in average **18% tip**. From JFK Airport [10024](https://www.google.it/maps/place/New+York,+NY+10024,+USA/@40.7858182,-73.996241,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25862915fae1d:0x82d8ab21c229bfe!8m2!3d40.7859464!4d-73.9741874?hl=en) people pay **19% tip**.
+We see that from **WorldTradeCenter** [ZIP: 10250](https://www.google.it/maps/place/40??42'36.0%22N+74??00'57.5%22W/@40.710004,-74.0181687,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d40.71!4d-74.01598?hl=en) people tend to pay in average **18% tip**.
 
-From La Guardia Airport [11371](https://www.google.it/maps/place/New+York,+NY+11371,+USA/@40.7809106,-73.8885426,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25f8eb3819a01:0x9c55729e06838673!8m2!3d40.7766392!4d-73.87425?hl=en) and Times Square [10036](https://www.google.it/maps/place/New+York,+NY+10036,+USA/@40.7611254,-74.0001543,15z/data=!3m1!4b1!4m5!3m4!1s0x89c2585393f82307:0xf7d56896de1566ed!8m2!3d40.7602619!4d-73.9932872?hl=en) people tend to pay **20% tip**.
+From **JFK Airport** [ZIP: 10024](https://www.google.it/maps/place/New+York,+NY+10024,+USA/@40.7858182,-73.996241,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25862915fae1d:0x82d8ab21c229bfe!8m2!3d40.7859464!4d-73.9741874?hl=en) people pay **19% tip**.
+
+From **LaGuardia Airport** [ZIP: 11371](https://www.google.it/maps/place/New+York,+NY+11371,+USA/@40.7809106,-73.8885426,14z/data=!3m1!4b1!4m5!3m4!1s0x89c25f8eb3819a01:0x9c55729e06838673!8m2!3d40.7766392!4d-73.87425?hl=en) and **Times Square** [ZIP: 10036](https://www.google.it/maps/place/New+York,+NY+10036,+USA/@40.7611254,-74.0001543,15z/data=!3m1!4b1!4m5!3m4!1s0x89c2585393f82307:0xf7d56896de1566ed!8m2!3d40.7602619!4d-73.9932872?hl=en) people tend to pay **20% tip**.
 
 7. Evaluation
 -------------
@@ -264,7 +280,7 @@ cohen_distance$estimate
     ## Treatment 
     ## 0.2105738
 
-It seems they tend to pay 0.21% more. While the difference exists and statistically significant the percentage difference is small.
+**It seems people traveling from Times Square tend to pay 0.21% more**. While the difference exists and statistically significant the percentage difference is small.
 
 Let's compare two airports (JFK and LaGuardia):
 
@@ -275,7 +291,7 @@ welch_test$p.value
 
     ## [1] 2.836445e-15
 
-People taking taxis from LaGuardia airport seem to pay more than people from JFK (p.value &lt; 0.05).
+**People taking taxis from LaGuardia airport seem to pay more than people from JFK (p-value=0)**.
 
 ``` r
 cohen_distance <- cohen.d(LaGuardia_11371$tip_percentage,JFK_11430$tip_percentage)
@@ -296,7 +312,7 @@ In some regions, such as Times Square and LaGuardia Airport we observe more outl
 
 People do pay more in absolute values, traveling from airports (JFK and LaGuardia), but primarily because the taxi fare is higher.
 
-People traveling from LaGuardia and TimesSquare tend to pay around 20% tips, while people traveling from Carnegie Hill tend to pay around 18%.
+People traveling from LaGuardia and TimesSquare tend to pay around 20% tips, while people traveling from World Trade Center tend to pay around 18%.
 
 9. Limitations
 --------------
