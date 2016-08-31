@@ -280,7 +280,7 @@ cohen_distance$estimate
     ## Treatment 
     ## 0.2105738
 
-**It seems people traveling from Times Square tend to pay 0.21% more**. While the difference exists and statistically significant the percentage difference is small.
+**The effect size of people traveling from Times Square than from WorldTradeCenter is 0.21 (difference of means divided by standard deviation)**.
 
 Let's compare two airports (JFK and LaGuardia):
 
@@ -301,7 +301,7 @@ cohen_distance$estimate
     ## Treatment 
     ## 0.1631596
 
-Still they pay only 0.16% more.
+Cohen distance is 0.16 more.
 
 8. Conclusion
 -------------
