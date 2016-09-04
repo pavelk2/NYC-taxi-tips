@@ -7,15 +7,15 @@ output:
     variant: markdown_github
 ---
 # NYC TAXI TRIPS
-# Are there some areas in NYC, traveling from which people pay more tips?
 
+# Are there some areas in NYC, traveling from which people pay more tips?
 
 ```{r}
 source("data_preparation.r")
 ```
 
 ## 1. Download dataset
-The dataset (csv) can be downloaded from [BigQuery](https://bigquery.cloud.google.com/table/nyc-tlc:yellow.trips_2015_07). You first need to export it to your Google Storage bucket (several CSV files are generated of 255MB), from where the files can be downloaded on a local machine. For the simplicity of obtaining the table we analyse the data for July, 2015 (not June as mentioned in the initial task).
+The dataset (csv) can be downloaded from [BigQuery](https://bigquery.cloud.google.com/table/nyc-tlc:yellow.trips_2015_07). You first need to export it to your Google Storage bucket (several CSV files are generated of 255MB), from where the files can be downloaded on a local machine. For the simplicity of obtaining the table we analyse the data for July, 2015.
 
 ```{r}
 trips = read.csv("yellow2015_07000000000000.csv")
@@ -94,7 +94,9 @@ fit <- lm(tip_percentage ~ trip_distance + pickup_datetime$hour + pickup_datetim
 summary(fit)
 ```
 
-Because we use sampled data every time we have different variables which are statistically significant, such as *distance (in miles)*, *pickup longitude*, *latitude* and the *number of passengers*. They affect the percentage of tips people leave and the slope shows how much does an extra mile (for distance) or an extra passenger (for number of passengers) affect tip percentage. We are primarily interested in how geographical location affect tip percentage, therefore further we split NYC into zones.
+R squared is very small so this linear regression does not represent well out dataset, even taking into account we have some statistically significant p-values for slopes of some variables.
+
+We are primarily interested in how geographical location affect tip percentage, therefore further we split NYC into zones.
 
 ## 6. Group trips into NYC zones (ZIP codes)
 There are different ways we could group pickup coordinates to analyze aggregated data. We decide to map the coordinates to the nearest ZIP codes. For that we 
@@ -187,7 +189,7 @@ cohen_distance <- cohen.d(TimesSquare_10036$tip_percentage,WorldTradeCenter_1025
 cohen_distance$estimate
 ```
 
-**It seems people traveling from Times Square tend to pay `r round(cohen_distance$estimate,2)`% more**. While the difference exists and statistically significant the percentage difference is small.
+Cohen's d is `r round(cohen_distance$estimate,2)`.
 
 Let's compare two airports (JFK and LaGuardia):
 
@@ -203,7 +205,7 @@ cohen_distance <- cohen.d(LaGuardia_11371$tip_percentage,JFK_11430$tip_percentag
 cohen_distance$estimate
 ```
 
-Still they pay only `r round(cohen_distance$estimate,2)`% more.
+Cohen's d is `r round(cohen_distance$estimate,2)`.
 
 ## 8. Conclusion
 From the data we did not find zones in NYC traveling from which people would pay substantially different tips (in percentages). Without focusing on tiny details we can say that primarily people pay 20% tip (the most popular option on the payment device screen), which is the median value in all zones.  
