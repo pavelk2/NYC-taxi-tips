@@ -44,6 +44,8 @@ clean_data <- function(trips){
 	# remove records with Latitudes which is not NYC (the limits are taken by hand looking at NYC Google Map)
 	trips <- trips[trips$dropoff_latitude > NYC_region[2],]
 	trips <- trips[trips$dropoff_latitude < NYC_region[4],]
+	# remove all trips where payment was done not via credit card, as only then we have the info about tips
+	trips <- trips[trips$payment_type == 1,]
 	# remove all trips where tip amount is 0 or negative (as we are interested in very high tips)
 	trips <- trips[trips$tip_amount > 0,]
 	# remove all trips where passenger count is 0
